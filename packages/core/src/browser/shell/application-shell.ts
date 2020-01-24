@@ -811,6 +811,36 @@ export class ApplicationShell extends Widget {
         return result;
     }
 
+    findTitle(tabBar: TabBar<Widget> | undefined, event?: Event): Title<Widget> | undefined {
+        if (event && event.target) {
+            let tabNode: HTMLElement | null = event.target as HTMLElement;
+            while (tabNode && !tabNode.classList.contains('p-TabBar-tab')) {
+                tabNode = tabNode.parentElement;
+            }
+            if (tabBar && tabNode && tabNode.title) {
+                let title = tabBar.titles.find(t => t.caption === tabNode!.title);
+                if (title) {
+                    return title;
+                }
+                title = tabBar.titles.find(t => t.label === tabNode!.title);
+                if (title) {
+                    return title;
+                }
+            }
+        }
+        return tabBar ? tabBar.currentTitle || undefined : undefined;
+    }
+
+    findTabBar(event?: Event): TabBar<Widget> | undefined {
+        if (event && event.target) {
+            const tabBar = this.findWidgetForElement(event.target as HTMLElement);
+            if (tabBar instanceof TabBar) {
+                return tabBar;
+            }
+        }
+        return this.currentTabBar;
+    }
+
     /**
      * The current widget in the application shell. The current widget is the last widget that
      * was active and not yet closed. See the remarks to `activeWidget` on what _active_ means.
@@ -1631,7 +1661,6 @@ export class ApplicationShell extends Widget {
             area.toggleMaximized();
         }
     }
-
 }
 
 /**
