@@ -61,8 +61,13 @@ import {
 import { FileSystemCommands } from '@theia/filesystem/lib/browser/filesystem-frontend-contribution';
 import { NavigatorDiff, NavigatorDiffCommands } from './navigator-diff';
 import { UriSelection } from '@theia/core/lib/common/selection';
+<<<<<<< HEAD
 import { DirNode } from '@theia/filesystem/lib/browser';
 import { FileNavigatorModel } from './navigator-model';
+=======
+import { PreferenceService } from '@theia/core/lib/browser';
+import { ContextMenuService } from '@theia/core/lib/browser/context-menu-service';
+>>>>>>> Core: Do no expand the widgets on the side-bars for the context menu
 
 export namespace FileNavigatorCommands {
     export const REVEAL_IN_NAVIGATOR: Command = {
@@ -162,8 +167,13 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
     @inject(PreferenceService)
     protected readonly preferenceService: PreferenceService;
 
+<<<<<<< HEAD
     @inject(WorkspaceCommandContribution)
     protected readonly workspaceCommandContribution: WorkspaceCommandContribution;
+=======
+    @inject(ContextMenuService)
+    protected readonly contextMenuService: ContextMenuService;
+>>>>>>> Core: Do no expand the widgets on the side-bars for the context menu
 
     constructor(
         @inject(FileNavigatorPreferences) protected readonly fileNavigatorPreferences: FileNavigatorPreferences,
@@ -241,9 +251,19 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
             execute: () => this.openView({ activate: true })
         });
         registry.registerCommand(FileNavigatorCommands.REVEAL_IN_NAVIGATOR, {
-            execute: () => this.openView({ activate: true }).then(() => this.selectWidgetFileNode(this.shell.currentWidget)),
-            isEnabled: () => Navigatable.is(this.shell.currentWidget),
-            isVisible: () => Navigatable.is(this.shell.currentWidget)
+            execute: (event?: Event) => {
+                const widget = this.getTargetedWidget(event);
+                this.selectWidgetFileNode(widget || this.shell.currentWidget);
+                this.openView({ activate: true });
+            },
+            isEnabled: (event?: Event) => {
+                const widget = this.getTargetedWidget(event);
+                return widget ? Navigatable.is(widget) : Navigatable.is(this.shell.currentWidget);
+            },
+            isVisible: (event?: Event) => {
+                const widget = this.getTargetedWidget(event);
+                return widget ? Navigatable.is(widget) : Navigatable.is(this.shell.currentWidget);
+            }
         });
         registry.registerCommand(FileNavigatorCommands.TOGGLE_HIDDEN_FILES, {
             execute: () => {
@@ -492,6 +512,22 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
         item.command = id;
         this.tabbarToolbarRegistry.registerItem(item);
     };
+
+    /**
+     * Evaluates the widget that is triggered by the right click.
+     * @param event: `event` to be used when searching for the title and the tab-bar.
+     *
+     * @returns `widget` of the respective `title` if it exists, else returns undefined.
+     */
+    private getTargetedWidget(event?: Event): Widget | undefined {
+        let title: Title<Widget> | undefined;
+        if (event && event.target) {
+            const tab = this.contextMenuService.findTabBar(event);
+            title = this.contextMenuService.findTitle(tab, event);
+        }
+        const widget = title && title.owner;
+        return widget;
+    }
 
     /**
      * Reveals and selects node in the file navigator to which given widget is related.
