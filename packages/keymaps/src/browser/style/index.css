@@ -52,8 +52,10 @@
     min-height: var(--theia-icon-size);
 }
 
-.th-action, .th-keybinding,
-.kb-actions, .kb-keybinding {
+.th-action,
+.th-keybinding,
+.kb-actions,
+.kb-keybinding {
     min-height: 18px;
     overflow: hidden;
     vertical-align: middle;
@@ -70,8 +72,12 @@
     padding: 2px 10px 5px 10px;
 }
 
-.th-label, .th-source, .th-context,
-.kb-label, .kb-source, .kb-context {
+.th-label,
+.th-source,
+.th-context,
+.kb-label,
+.kb-source,
+.kb-context {
     padding: 2px 10px 5px 10px;
     min-height: 18px;
     overflow: hidden;
@@ -121,6 +127,10 @@
     background-color: var(--theia-editorWidget-background);
 }
 
+.kb table th:first-child {
+    width: 4.17%;
+}
+
 .kb table .th-action {
     width: 35px;
 }
@@ -149,7 +159,7 @@
 }
 
 .no-kb {
-    border: 1px solid  var(--theia-editorWarning-foreground);
+    border: 1px solid var(--theia-editorWarning-foreground);
 }
 
 #search-kb {
