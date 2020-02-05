@@ -30,34 +30,53 @@ export class MonacoContextMenuService implements IContextMenuService {
 
     showContextMenu(delegate: IContextMenuDelegate): void {
         const anchor = toAnchor(delegate.getAnchor());
+        const delegateAnchor = anchor;
         // If it is the general context menu, we want to delegate to our menu registry entirely and ignore the actually passed actions.
         // Unfortunately checking the existence of certain properties seems to be the best way to tell, what kind of context menu is requested.
         if (delegate.hasOwnProperty('getKeyBinding')) {
-            this.contextMenuRenderer.render(EDITOR_CONTEXT_MENU, anchor, () => delegate.onHide(false));
-        } else {
-            const actions = delegate.getActions();
-            const commands = new CommandRegistry();
-            const menu = new Menu({
-                commands
-            });
+            let element = delegateAnchor instanceof HTMLElement
+                ? delegateAnchor
+                : document.elementFromPoint(delegateAnchor.x, delegateAnchor.y);
+            if (element instanceof HTMLElement) {
+                while (element && !element.classList.contains('editor-scrollable')) {
+                    element = element.parentElement;
+                }
+                if (element) {
+                    if (element instanceof HTMLElement) {
+                        element.oncontextmenu = (ev: MouseEvent) => {
+                            console.log(ev);
+                            window.onscroll = () => {
+                                console.log('hello?');
+                            };
+                        };
+                    }
+                }
+                this.contextMenuRenderer.render(EDITOR_CONTEXT_MENU, anchor, () => delegate.onHide(false));
+            } else {
+                const actions = delegate.getActions();
+                const commands = new CommandRegistry();
+                const menu = new Menu({
+                    commands
+                });
 
-            for (const action of actions) {
-                const commandId = 'quickfix_' + actions.indexOf(action);
-                commands.addCommand(commandId, {
-                    label: action.label,
-                    className: action.class,
-                    isToggled: () => action.checked,
-                    isEnabled: () => action.enabled,
-                    execute: () => action.run()
-                });
-                menu.addItem({
-                    type: 'command',
-                    command: commandId
-                });
+                for (const action of actions) {
+                    const commandId = 'quickfix_' + actions.indexOf(action);
+                    commands.addCommand(commandId, {
+                        label: action.label,
+                        className: action.class,
+                        isToggled: () => action.checked,
+                        isEnabled: () => action.enabled,
+                        execute: () => action.run()
+                    });
+                    menu.addItem({
+                        type: 'command',
+                        command: commandId
+                    });
+                }
+                menu.aboutToClose.connect(() => delegate.onHide(false));
+                menu.open(anchor.x, anchor.y);
             }
-            menu.aboutToClose.connect(() => delegate.onHide(false));
-            menu.open(anchor.x, anchor.y);
         }
-    }
 
+    }
 }
