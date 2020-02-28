@@ -32,9 +32,6 @@
       "path": "../packages/debug/compile.tsconfig.json"
     },
     {
-      "path": "../packages/editor-preview/compile.tsconfig.json"
-    },
-    {
       "path": "../packages/editor/compile.tsconfig.json"
     },
     {

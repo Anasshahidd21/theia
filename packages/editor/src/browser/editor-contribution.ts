@@ -84,8 +84,8 @@ export class EditorContribution implements FrontendApplicationContribution, Comm
     }
 
     protected readonly toDisposeOnCurrentEditorChanged = new DisposableCollection();
-    protected updateStatusBar(): void {
-        this.toDisposeOnCurrentEditorChanged.dispose();
+    public updateStatusBar(): void {
+        // this.toDisposeOnCurrentEditorChanged.dispose();
 
         const widget = this.editorManager.currentEditor;
         const editor = widget && widget.editor;

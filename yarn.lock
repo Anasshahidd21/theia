@@ -1039,6 +1039,14 @@
     serialize-javascript "^1.4.0"
     webpack-sources "^1.0.1"
 
+"@theia/editor-preview@^0.15.0":
+  version "0.15.0"
+  resolved "https://registry.yarnpkg.com/@theia/editor-preview/-/editor-preview-0.15.0.tgz#182747f6f246b9b86fdb5fc890b4657e9f947e15"
+  integrity sha512-HqSJgCIYmPrOxqn//UvGbfheK+MhmSv3A0QtSI5MdbcR3n0jekpQw/OyDZZSm6Wb3XysJB8LfEWwOUMQvoK2cA==
+  dependencies:
+    "@theia/core" "^0.15.0"
+    "@theia/editor" "^0.15.0"
+
 "@theia/node-pty@0.7.8-theia004":
   version "0.7.8-theia004"
   resolved "https://registry.yarnpkg.com/@theia/node-pty/-/node-pty-0.7.8-theia004.tgz#0fe31b958df9315352d5fbeea7075047cf69c935"

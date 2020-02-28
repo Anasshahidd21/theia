@@ -60,9 +60,9 @@ export class FileNavigatorModel extends FileTreeModel {
         }
     }
 
-    previewNode(node: TreeNode): void {
+    async previewNode(node: TreeNode): Promise<void> {
         if (FileNode.is(node)) {
-            open(this.openerService, node.uri, { mode: 'reveal', preview: true });
+            await open(this.openerService, node.uri, { mode: 'reveal', preview: true });
         }
     }
 

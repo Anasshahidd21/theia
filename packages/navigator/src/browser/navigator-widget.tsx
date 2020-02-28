@@ -32,6 +32,8 @@ import { FileSystem } from '@theia/filesystem/lib/common/filesystem';
 import { isOSX, environment } from '@theia/core';
 import * as React from 'react';
 import { NavigatorContextKeyService } from './navigator-context-key-service';
+import { EditorManager, EditorWidget } from '@theia/editor/lib/browser';
+import { EditorContribution } from '@theia/editor/lib/browser/editor-contribution';
 
 export const FILE_NAVIGATOR_ID = 'files';
 export const EXPLORER_VIEW_CONTAINER_ID = 'explorer-view-container';
@@ -51,6 +53,12 @@ export class FileNavigatorWidget extends FileTreeWidget {
 
     @inject(NavigatorContextKeyService)
     protected readonly contextKeyService: NavigatorContextKeyService;
+
+    @inject(EditorManager)
+    protected readonly editorManager: EditorManager;
+
+    @inject(EditorContribution)
+    protected readonly editorContribution: EditorContribution;
 
     constructor(
         @inject(TreeProps) readonly props: TreeProps,
@@ -228,10 +236,17 @@ export class FileNavigatorWidget extends FileTreeWidget {
         </div>;
     }
 
-    protected handleClickEvent(node: TreeNode | undefined, event: React.MouseEvent<HTMLElement>): void {
+    protected async handleClickEvent(node: TreeNode | undefined, event: React.MouseEvent<HTMLElement>): Promise<void> {
         const modifierKeyCombined: boolean = isOSX ? (event.shiftKey || event.metaKey) : (event.shiftKey || event.ctrlKey);
         if (!modifierKeyCombined && node && this.corePreferences['workbench.list.openMode'] === 'singleClick') {
-            this.model.previewNode(node);
+            await this.model.previewNode(node);
+            if (FileNode.is(node)) {
+                const widget = await this.editorManager.getByUri(node.uri);
+                if (widget && widget instanceof EditorWidget) {
+                    this.editorManager['setCurrentEditor'](widget);
+                    this.editorContribution['updateStatusBar']();
+                }
+            }
         }
         super.handleClickEvent(node, event);
     }

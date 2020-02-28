@@ -20,7 +20,6 @@
     "@theia/core": "^0.15.0",
     "@theia/debug": "^0.15.0",
     "@theia/editor": "^0.15.0",
-    "@theia/editor-preview": "^0.15.0",
     "@theia/file-search": "^0.15.0",
     "@theia/filesystem": "^0.15.0",
     "@theia/getting-started": "^0.15.0",
