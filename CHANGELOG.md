@@ -10,6 +10,7 @@ Breaking changes:
 - [scm][git] the History view (GitHistoryWidget) has moved from the git package to a new   package, scm-extra, and
   renamed to ScmHistoryWidget.  GitNavigableListWidget has also moved.
   CSS classes have been moved renamed accordingly.  [6381](https://github.com/eclipse-theia/theia/pull/6381)
+- [core] removed the logic of giving focus to the widget upon opening the context menu from `handleContextMenu()` instead functionality added to handle it without focus. [#6965]   (https://github.com/eclipse-theia/theia/pull/6965)
 
 ## v0.16.0
 

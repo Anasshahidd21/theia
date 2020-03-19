@@ -541,13 +541,15 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
             execute: (event?: Event) => {
                 const tabBar = this.findTabBar(event)!;
                 const currentTitle = this.findTitle(tabBar, event);
-                this.shell.closeTabs(tabBar, title => title !== currentTitle && title.closable);
+                const area = this.shell.getAreaFor(tabBar)!;
+                this.shell.closeTabs(area, title => title !== currentTitle);
             }
         });
         commandRegistry.registerCommand(CommonCommands.CLOSE_RIGHT_TABS, {
             isEnabled: (event?: Event) => {
-                const tabBar = this.findTabBar(event);
-                return tabBar !== undefined && tabBar.titles.some((title, index) => index > tabBar.currentIndex && title.closable);
+                const tabBar = this.findTabBar(event)!;
+                const currentIndex = this.targetTitleIndex(event);
+                return tabBar !== undefined && tabBar.titles.some((title, index) => index > currentIndex && title.closable);
             },
             isVisible: (event?: Event) => {
                 const area = this.findTabArea(event);
@@ -555,7 +557,7 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
             },
             execute: (event?: Event) => {
                 const tabBar = this.findTabBar(event)!;
-                const currentIndex = tabBar.currentIndex;
+                const currentIndex = this.targetTitleIndex(event);
                 this.shell.closeTabs(tabBar, (title, index) => index > currentIndex && title.closable);
             }
         });
@@ -577,7 +579,7 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
             isEnabled: () => {
                 const currentWidget = this.shell.getCurrentWidget('main');
                 return currentWidget !== undefined &&
-                       this.shell.mainAreaTabBars.some(tb => tb.titles.some(title => title.owner !== currentWidget && title.closable));
+                    this.shell.mainAreaTabBars.some(tb => tb.titles.some(title => title.owner !== currentWidget && title.closable));
             },
             execute: () => {
                 const currentWidget = this.shell.getCurrentWidget('main');
@@ -636,6 +638,24 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
         commandRegistry.registerCommand(CommonCommands.SELECT_ICON_THEME, {
             execute: () => this.selectIconTheme()
         });
+    }
+
+    /**
+     * Evaluates the currentIndex of the title in the array of titles.
+     * @param event: `event` to be used when searching for the title and the tab-bar.
+     *
+     * @returns `currentIndex` if the `targetTitle` is available in the array, else returns the index of currently-selected title.
+     */
+    private targetTitleIndex(event?: Event): number {
+        const tabBar = this.findTabBar(event)!;
+        const targetTitle = this.findTitle(tabBar, event);
+        let currentIndex: number;
+        if (targetTitle) {
+            currentIndex = tabBar.titles.indexOf(targetTitle);
+        } else {
+            currentIndex = tabBar.currentIndex;
+        }
+        return currentIndex;
     }
 
     private canToggleMaximized(event?: Event): boolean {
