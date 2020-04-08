@@ -36,7 +36,6 @@ export class WorkspaceInputDialog extends SingleTextInputDialog {
         @inject(WorkspaceService) protected readonly workspaceService?: WorkspaceService
     ) {
         super(props);
-        this.appendRootName();
         this.appendParentPath();
     }
 
@@ -46,45 +45,26 @@ export class WorkspaceInputDialog extends SingleTextInputDialog {
      */
     protected appendParentPath(): void {
         // Compute the label for the parent URI.
-        const label = this.labelProvider.getLongName(this.props.parentUri);
+        let label = this.labelProvider.getLongName(this.props.parentUri);
         const element = document.createElement('div');
+        element.classList.add('theia-dialog-node-content');
         // Create the `folder` icon.
         const icon = document.createElement('i');
-        icon.classList.add('fa', 'fa-folder');
-        icon.style.marginRight = '0.5em';
-        element.appendChild(icon);
-        element.appendChild(document.createTextNode(label));
-        element.style.marginBottom = '1.0em';
-        // Add the path and icon div before the `inputField`.
-        this.contentNode.insertBefore(element, this.inputField);
-    }
-
-    /**
-     * Append the human-readable root `path` to the dialog when in a multi-root workspace.
-     * When two roots have the same name, displays full path of the root, else displays the root-name.
-     */
-    protected appendRootName(): void {
+        icon.classList.add('codicon', 'codicon-folder', 'theia-dialog-icon');
         if (this.workspaceService && this.workspaceService.isMultiRootWorkspaceOpened) {
-            const roots = this.workspaceService.tryGetRoots();
             const rootUri = this.workspaceService.getWorkspaceRootUri(this.props.parentUri);
             if (rootUri) {
-                const rootsWithSameName = roots.some(singleRoot => {
-                    const singleRootUri = new URI(singleRoot.uri);
-                    return this.labelProvider.getName(rootUri) === this.labelProvider.getName(singleRootUri) && singleRootUri !== rootUri;
-                });
-                // Displays the root name if its unique, else displays the root path
-                const label = rootsWithSameName ? this.labelProvider.getLongName(rootUri) : this.labelProvider.getName(rootUri);
-                const element = document.createElement('div');
-                const icon = document.createElement('i');
-                // Creates the Root icon (circle)
-                icon.classList.add('fa', 'fa-circle-o');
-                icon.style.marginRight = '1.0em';
-                element.appendChild(icon);
-                element.appendChild(document.createTextNode(label));
-                element.style.marginBottom = '0.5em';
-                // Place the path and icon div before the `inputField`
-                this.contentNode.insertBefore(element, this.inputField);
+                element.title = this.labelProvider.getLongName(rootUri);
+                if (this.props.parentUri.isEqualOrParent(rootUri)) {
+                    icon.classList.replace('codicon-folder', 'codicon-root-folder');
+                    label = this.labelProvider.getName(this.props.parentUri);
+                }
             }
         }
+        // Add the path and icon div before the `inputField`.
+        element.appendChild(icon);
+        element.appendChild(document.createTextNode(label));
+        this.contentNode.insertBefore(element, this.inputField);
     }
 }
+
