@@ -670,19 +670,18 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
     }
 
     private canToggleMaximized(event?: Event): boolean {
-        if (event && event.target) {
-            const widget = this.shell.findWidgetForElement(event.target as HTMLElement);
+        if (event && Array.isArray(event) && event[0].target) {
+            const widget = this.shell.findWidgetForElement(event[0].target as HTMLElement);
             if (widget) {
-                const test = this.shell.mainPanel.contains(widget) || this.shell.bottomPanel.contains(widget);
-                return test;
+                return this.shell.mainPanel.contains(widget) || this.shell.bottomPanel.contains(widget);
             }
         }
         return this.shell.canToggleMaximized();
     }
 
     private toggleMaximized(event?: Event): void {
-        if (event && event.target) {
-            const widget = this.shell.findWidgetForElement(event.target as HTMLElement);
+        if (event && Array.isArray(event) && event[0].target) {
+            const widget = this.shell.findWidgetForElement(event[0].target as HTMLElement);
             if (widget) {
                 if (this.shell.mainPanel.contains(widget)) {
                     this.shell.mainPanel.toggleMaximized();

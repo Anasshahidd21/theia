@@ -812,8 +812,8 @@ export class ApplicationShell extends Widget {
     }
 
     findTitle(tabBar: TabBar<Widget> | undefined, event?: Event): Title<Widget> | undefined {
-        if (event && event.target) {
-            let tabNode: HTMLElement | null = event.target as HTMLElement;
+        if (event && Array.isArray(event) && event[0].target) {
+            let tabNode: HTMLElement | null = event[0].target as HTMLElement;
             while (tabNode && !tabNode.classList.contains('p-TabBar-tab')) {
                 tabNode = tabNode.parentElement;
             }
@@ -832,8 +832,8 @@ export class ApplicationShell extends Widget {
     }
 
     findTabBar(event?: Event): TabBar<Widget> | undefined {
-        if (event && event.target) {
-            const tabBar = this.findWidgetForElement(event.target as HTMLElement);
+        if (event && Array.isArray(event) && event[0].target) {
+            const tabBar = this.findWidgetForElement(event[0].target as HTMLElement);
             if (tabBar instanceof TabBar) {
                 return tabBar;
             }

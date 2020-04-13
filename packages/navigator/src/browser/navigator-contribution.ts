@@ -446,7 +446,7 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
      */
     private getTargetedWidget(event?: Event): Widget | undefined {
         let title: Title<Widget> | undefined;
-        if (event && event.target) {
+        if (event) {
             const tab = this.shell.findTabBar(event);
             title = this.shell.findTitle(tab, event);
         }
