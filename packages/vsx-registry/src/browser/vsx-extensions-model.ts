@@ -171,11 +171,12 @@ export class VSXExtensionsModel {
     }
 
     protected async findLatestCompatibleVersion(id: string): Promise<string> {
-        // query allVersions from api (ignoring the latest, since latest's value === most recent release's value)
+        // query allVersions from api (ignoring the latest)
         // check the engine tag of each version
         // if the latest compatible does not have "versionAlias": [ "latest" ], update download link
 
         const extension = await this.api.getExtension(id);
+        let latestCompatibleVersion = '';
 
         for (const version in extension.allVersions) {
             if (version === 'latest') {
@@ -187,24 +188,31 @@ export class VSXExtensionsModel {
             console.log(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
 
             // TODO: update to using 'fetch()', and change fetchJson back to protected
-            const versionJson: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
+            const { engines, versionAlias }: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
 
             // TODO: update to using 'semver'
-            if (versionJson.engines && semver.lte(versionJson.engines[0], VSCODE_DEFAULT_API_VERSION) && versionJson.versionAlias && versionJson.versionAlias[0] === 'latest') {
-                return 'latest';
+            if (engines && versionAlias && this.isEngineValid(engines[0]) && versionAlias[0] === 'latest') {
+                latestCompatibleVersion = 'latest';
                 break;
-            } else if (versionJson.engines && semver.lte(versionJson.engines[0], VSCODE_DEFAULT_API_VERSION)) {
-                return version;
+            } else if (engines && this.isEngineValid(engines[0])) {
+                latestCompatibleVersion = version;
                 break;
-            } else {
-                continue;
             }
         }
 
-        // no compatible version found
-        return '';
+        // return the latest compatible version
+        return latestCompatibleVersion;
     }
 
+    protected isEngineValid(engine: string): boolean {
+        const currentVersion = this.getCurrentVersion();
+        const parsedEngine = engine.split('@')[1];
+        return semver.lte(parsedEngine, currentVersion);
+    }
+
+    protected getCurrentVersion(): string {
+        return VSCODE_DEFAULT_API_VERSION;
+    }
     protected async updateInstalled(): Promise<void> {
         return this.doChange(async () => {
             const plugins = this.pluginSupport.plugins;
