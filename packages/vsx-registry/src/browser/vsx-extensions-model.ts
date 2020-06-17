@@ -28,6 +28,7 @@ import { VSXExtension, VSXExtensionFactory } from './vsx-extension';
 import { ProgressService } from '@theia/core/lib/common/progress-service';
 import { VSXExtensionsSearchModel } from './vsx-extensions-search-model';
 import { Deferred } from '@theia/core/lib/common/promise-util';
+import { VSCODE_DEFAULT_API_VERSION } from '../../../plugin-ext-vscode/src/node/plugin-vscode-init';
 
 @injectable()
 export class VSXExtensionsModel {
@@ -143,49 +144,64 @@ export class VSXExtensionsModel {
             const searchResult = new Set<string>();
             for (const data of result.extensions) {
                 const id = data.namespace.toLowerCase() + '.' + data.name.toLowerCase();
-                const updatedDownloadUrl = await this.findLatestCompatibleVersion(id);
-                this.setExtension(id).update(Object.assign(data, {
-                    publisher: data.namespace,
-                    downloadUrl: data.files.download,
-                    iconUrl: data.files.icon,
-                    readmeUrl: data.files.readme,
-                    licenseUrl: data.files.license,
-                }));
-                searchResult.add(id);
-
+                const latestCompatibleVersion = await this.findLatestCompatibleVersion(id);
+                if (latestCompatibleVersion !== '') {
+                    if (latestCompatibleVersion !== 'latest') {
+                        const apiUri = await this.environment.getRegistryApiUri();
+                        const updatedDownloadLink = apiUri.resolve(id.replace('.', '/')).toString() + `/${latestCompatibleVersion}`;
+                        data.files.download = updatedDownloadLink;
+                    }
+                    this.setExtension(id).update(Object.assign(data, {
+                        publisher: data.namespace,
+                        downloadUrl: data.files.download,
+                        iconUrl: data.files.icon,
+                        readmeUrl: data.files.readme,
+                        licenseUrl: data.files.license,
+                    }));
+                    searchResult.add(id);
+                }
                 ///
-                console.log('ext name: ' + data.name + '; publisher: ' + data.namespace + '; downloadUrl: ' + data.files.download);
+                // console.log('ext name: ' + data.name + '; publisher: ' + data.namespace + '; downloadUrl: ' + data.files.download);
             }
             this._searchResult = searchResult;
 
         }, token);
     }
 
-    protected async findLatestCompatibleVersion(id: string): Promise<void> {
-        // query allVersions from api (ignoring the latest)
+    protected async findLatestCompatibleVersion(id: string): Promise<string> {
+        // query allVersions from api (ignoring the latest, since latest's value === most recent release's value)
         // check the engine tag of each version
         // if the latest compatible does not have "versionAlias": [ "latest" ], update download link
 
         const extension = await this.api.getExtension(id);
-        const latestCompatibleVersion = '';
+        let latestCompatibleExtVersion = '';
 
         for (const version in extension.allVersions) {
-            if (version === "latest") {
+            if (version === 'latest') {
                 continue;
             }
 
             const apiUri = await this.environment.getRegistryApiUri();
+            ///
+            console.log(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
+
+            // TODO: update to using 'fetch', and change fetchJson back to protected
             const versionJson: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
-            if (versionJson.engines) {
-                const engineTag = versionJson.engines[0];
-                ///
-                console.log('engineTag: ' + engineTag);
+
+            // TODO: update to using 'semver'
+            if (versionJson.engines && versionJson.engines[0] >= VSCODE_DEFAULT_API_VERSION && versionJson.versionAlias && versionJson.versionAlias[0] === 'latest') {
+                latestCompatibleExtVersion = 'latest';
+                break;
+            } else if (versionJson.engines && versionJson.engines[0] >= VSCODE_DEFAULT_API_VERSION) {
+                latestCompatibleExtVersion = version;
+                break;
+            } else {
+                continue;
             }
-
-
         }
 
-        // return; // return the latest compatible version
+        // return the latest compatible version
+        return latestCompatibleExtVersion;
     }
 
     protected async updateInstalled(): Promise<void> {
