@@ -21,7 +21,8 @@ import * as sanitize from 'sanitize-html';
 import { Emitter } from '@theia/core/lib/common/event';
 import { CancellationToken, CancellationTokenSource } from '@theia/core/lib/common/cancellation';
 import { VSXRegistryAPI, VSXResponseError } from '../common/vsx-registry-api';
-import { VSXSearchParam } from '../common/vsx-registry-types';
+import { VSXSearchParam, VSXExtensionRaw } from '../common/vsx-registry-types';
+import { VSXEnvironment } from '../common/vsx-environment';
 import { HostedPluginSupport } from '@theia/plugin-ext/lib/hosted/browser/hosted-plugin';
 import { VSXExtension, VSXExtensionFactory } from './vsx-extension';
 import { ProgressService } from '@theia/core/lib/common/progress-service';
@@ -48,6 +49,9 @@ export class VSXExtensionsModel {
 
     @inject(VSXExtensionsSearchModel)
     readonly search: VSXExtensionsSearchModel;
+
+    @inject(VSXEnvironment)
+    protected readonly environment: VSXEnvironment;
 
     protected readonly initialized = new Deferred<void>();
 
@@ -139,6 +143,7 @@ export class VSXExtensionsModel {
             const searchResult = new Set<string>();
             for (const data of result.extensions) {
                 const id = data.namespace.toLowerCase() + '.' + data.name.toLowerCase();
+                const updatedDownloadUrl = await this.findLatestCompatibleVersion(id);
                 this.setExtension(id).update(Object.assign(data, {
                     publisher: data.namespace,
                     downloadUrl: data.files.download,
@@ -147,9 +152,40 @@ export class VSXExtensionsModel {
                     licenseUrl: data.files.license,
                 }));
                 searchResult.add(id);
+
+                ///
+                console.log('ext name: ' + data.name + '; publisher: ' + data.namespace + '; downloadUrl: ' + data.files.download);
             }
             this._searchResult = searchResult;
+
         }, token);
+    }
+
+    protected async findLatestCompatibleVersion(id: string): Promise<void> {
+        // query allVersions from api (ignoring the latest)
+        // check the engine tag of each version
+        // if the latest compatible does not have "versionAlias": [ "latest" ], update download link
+
+        const extension = await this.api.getExtension(id);
+        const latestCompatibleVersion = '';
+
+        for (const version in extension.allVersions) {
+            if (version === "latest") {
+                continue;
+            }
+
+            const apiUri = await this.environment.getRegistryApiUri();
+            const versionJson: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
+            if (versionJson.engines) {
+                const engineTag = versionJson.engines[0];
+                ///
+                console.log('engineTag: ' + engineTag);
+            }
+
+
+        }
+
+        // return; // return the latest compatible version
     }
 
     protected async updateInstalled(): Promise<void> {
