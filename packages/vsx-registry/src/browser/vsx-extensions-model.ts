@@ -29,6 +29,7 @@ import { ProgressService } from '@theia/core/lib/common/progress-service';
 import { VSXExtensionsSearchModel } from './vsx-extensions-search-model';
 import { Deferred } from '@theia/core/lib/common/promise-util';
 import { VSCODE_DEFAULT_API_VERSION } from '../../../plugin-ext-vscode/src/node/plugin-vscode-init';
+import * as semver from 'semver';
 
 @injectable()
 export class VSXExtensionsModel {
@@ -145,21 +146,22 @@ export class VSXExtensionsModel {
             for (const data of result.extensions) {
                 const id = data.namespace.toLowerCase() + '.' + data.name.toLowerCase();
                 const latestCompatibleVersion = await this.findLatestCompatibleVersion(id);
-                if (latestCompatibleVersion !== '') {
-                    if (latestCompatibleVersion !== 'latest') {
-                        const apiUri = await this.environment.getRegistryApiUri();
-                        const updatedDownloadLink = apiUri.resolve(id.replace('.', '/')).toString() + `/${latestCompatibleVersion}`;
-                        data.files.download = updatedDownloadLink;
-                    }
-                    this.setExtension(id).update(Object.assign(data, {
-                        publisher: data.namespace,
-                        downloadUrl: data.files.download,
-                        iconUrl: data.files.icon,
-                        readmeUrl: data.files.readme,
-                        licenseUrl: data.files.license,
-                    }));
-                    searchResult.add(id);
+                if (latestCompatibleVersion === '') {
+                    continue;
                 }
+                if (latestCompatibleVersion !== 'latest') {
+                    const apiUri = await this.environment.getRegistryApiUri();
+                    const updatedDownloadLink = apiUri.resolve(id.replace('.', '/')).toString() + `/${latestCompatibleVersion}`;
+                    data.files.download = updatedDownloadLink;
+                }
+                this.setExtension(id).update(Object.assign(data, {
+                    publisher: data.namespace,
+                    downloadUrl: data.files.download,
+                    iconUrl: data.files.icon,
+                    readmeUrl: data.files.readme,
+                    licenseUrl: data.files.license,
+                }));
+                searchResult.add(id);
                 ///
                 // console.log('ext name: ' + data.name + '; publisher: ' + data.namespace + '; downloadUrl: ' + data.files.download);
             }
@@ -186,22 +188,30 @@ export class VSXExtensionsModel {
             console.log(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
 
             // TODO: update to using 'fetch', and change fetchJson back to protected
-            const versionJson: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
+            const { engines, versionAlias }: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
 
             // TODO: update to using 'semver'
-            if (versionJson.engines && versionJson.engines[0] >= VSCODE_DEFAULT_API_VERSION && versionJson.versionAlias && versionJson.versionAlias[0] === 'latest') {
+            if (engines && versionAlias && this.isEngineValid(engines[0]) && versionAlias[0] === 'latest') {
                 latestCompatibleExtVersion = 'latest';
                 break;
-            } else if (versionJson.engines && versionJson.engines[0] >= VSCODE_DEFAULT_API_VERSION) {
+            } else if (engines && this.isEngineValid(engines[0])) {
                 latestCompatibleExtVersion = version;
                 break;
-            } else {
-                continue;
             }
         }
 
         // return the latest compatible version
         return latestCompatibleExtVersion;
+    }
+
+    protected isEngineValid(engine: string): boolean {
+        const currentVersion = this.getCurrentVersion();
+        const parsedEngine = engine.split('@')[1];
+        return semver.lte(parsedEngine, currentVersion);
+    }
+
+    protected getCurrentVersion(): string {
+        return VSCODE_DEFAULT_API_VERSION;
     }
 
     protected async updateInstalled(): Promise<void> {
