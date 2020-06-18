@@ -21,12 +21,15 @@ import * as sanitize from 'sanitize-html';
 import { Emitter } from '@theia/core/lib/common/event';
 import { CancellationToken, CancellationTokenSource } from '@theia/core/lib/common/cancellation';
 import { VSXRegistryAPI, VSXResponseError } from '../common/vsx-registry-api';
-import { VSXSearchParam } from '../common/vsx-registry-types';
+import { VSXSearchParam, VSXExtensionRaw } from '../common/vsx-registry-types';
+import { VSXEnvironment } from '../common/vsx-environment';
 import { HostedPluginSupport } from '@theia/plugin-ext/lib/hosted/browser/hosted-plugin';
 import { VSXExtension, VSXExtensionFactory } from './vsx-extension';
 import { ProgressService } from '@theia/core/lib/common/progress-service';
 import { VSXExtensionsSearchModel } from './vsx-extensions-search-model';
 import { Deferred } from '@theia/core/lib/common/promise-util';
+import { VSCODE_DEFAULT_API_VERSION } from '../../../plugin-ext-vscode/src/node/plugin-vscode-init';
+import * as semver from 'semver';
 
 @injectable()
 export class VSXExtensionsModel {
@@ -48,6 +51,9 @@ export class VSXExtensionsModel {
 
     @inject(VSXExtensionsSearchModel)
     readonly search: VSXExtensionsSearchModel;
+
+    @inject(VSXEnvironment)
+    protected readonly environment: VSXEnvironment;
 
     protected readonly initialized = new Deferred<void>();
 
@@ -139,17 +145,64 @@ export class VSXExtensionsModel {
             const searchResult = new Set<string>();
             for (const data of result.extensions) {
                 const id = data.namespace.toLowerCase() + '.' + data.name.toLowerCase();
-                this.setExtension(id).update(Object.assign(data, {
-                    publisher: data.namespace,
-                    downloadUrl: data.files.download,
-                    iconUrl: data.files.icon,
-                    readmeUrl: data.files.readme,
-                    licenseUrl: data.files.license,
-                }));
-                searchResult.add(id);
+                const latestCompatibleVersion = await this.findLatestCompatibleVersion(id);
+                if (latestCompatibleVersion !== '') {
+                    if (latestCompatibleVersion !== 'latest') {
+                        const apiUri = await this.environment.getRegistryApiUri();
+                        const updatedDownloadLink =
+                            apiUri.resolve(id.replace('.', '/')).toString() + `/${latestCompatibleVersion}/file/${id}-${latestCompatibleVersion}.vsix`;
+                        data.files.download = updatedDownloadLink;
+                    }
+                    this.setExtension(id).update(Object.assign(data, {
+                        publisher: data.namespace,
+                        downloadUrl: data.files.download,
+                        iconUrl: data.files.icon,
+                        readmeUrl: data.files.readme,
+                        licenseUrl: data.files.license,
+                    }));
+                    searchResult.add(id);
+                }
+                ///
+                // console.log('ext name: ' + data.name + '; publisher: ' + data.namespace + '; downloadUrl: ' + data.files.download);
             }
             this._searchResult = searchResult;
+
         }, token);
+    }
+
+    protected async findLatestCompatibleVersion(id: string): Promise<string> {
+        // query allVersions from api (ignoring the latest, since latest's value === most recent release's value)
+        // check the engine tag of each version
+        // if the latest compatible does not have "versionAlias": [ "latest" ], update download link
+
+        const extension = await this.api.getExtension(id);
+
+        for (const version in extension.allVersions) {
+            if (version === 'latest') {
+                continue;
+            }
+
+            const apiUri = await this.environment.getRegistryApiUri();
+            ///
+            console.log(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
+
+            // TODO: update to using 'fetch()', and change fetchJson back to protected
+            const versionJson: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${version}`);
+
+            // TODO: update to using 'semver'
+            if (versionJson.engines && semver.lte(versionJson.engines[0], VSCODE_DEFAULT_API_VERSION) && versionJson.versionAlias && versionJson.versionAlias[0] === 'latest') {
+                return 'latest';
+                break;
+            } else if (versionJson.engines && semver.lte(versionJson.engines[0], VSCODE_DEFAULT_API_VERSION)) {
+                return version;
+                break;
+            } else {
+                continue;
+            }
+        }
+
+        // no compatible version found
+        return '';
     }
 
     protected async updateInstalled(): Promise<void> {
