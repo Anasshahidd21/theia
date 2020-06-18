@@ -28,7 +28,7 @@ import { VSXExtension, VSXExtensionFactory } from './vsx-extension';
 import { ProgressService } from '@theia/core/lib/common/progress-service';
 import { VSXExtensionsSearchModel } from './vsx-extensions-search-model';
 import { Deferred } from '@theia/core/lib/common/promise-util';
-import { VSCODE_DEFAULT_API_VERSION } from '../../../plugin-ext-vscode/src/node/plugin-vscode-init';
+import { VSCODE_DEFAULT_API_VERSION } from '@theia/plugin-ext-vscode/lib/common/plugin-vscode-environment';
 import * as semver from 'semver';
 
 @injectable()
@@ -146,22 +146,24 @@ export class VSXExtensionsModel {
             for (const data of result.extensions) {
                 const id = data.namespace.toLowerCase() + '.' + data.name.toLowerCase();
                 const latestCompatibleVersion = await this.findLatestCompatibleVersion(id);
-                if (latestCompatibleVersion !== '') {
-                    if (latestCompatibleVersion !== 'latest') {
-                        const apiUri = await this.environment.getRegistryApiUri();
-                        const updatedDownloadLink =
-                            apiUri.resolve(id.replace('.', '/')).toString() + `/${latestCompatibleVersion}/file/${id}-${latestCompatibleVersion}.vsix`;
-                        data.files.download = updatedDownloadLink;
-                    }
-                    this.setExtension(id).update(Object.assign(data, {
-                        publisher: data.namespace,
-                        downloadUrl: data.files.download,
-                        iconUrl: data.files.icon,
-                        readmeUrl: data.files.readme,
-                        licenseUrl: data.files.license,
-                    }));
-                    searchResult.add(id);
+                if (!latestCompatibleVersion) {
+                    continue;
                 }
+                if (latestCompatibleVersion !== 'latest') {
+                    const apiUri = await this.environment.getRegistryApiUri();
+                    const updatedDownloadLink =
+                        apiUri.resolve(id.replace('.', '/')).toString() + `/${latestCompatibleVersion}/file/${id}-${latestCompatibleVersion}.vsix`;
+                    data.files.download = updatedDownloadLink;
+                }
+                this.setExtension(id).update(Object.assign(data, {
+                    publisher: data.namespace,
+                    downloadUrl: data.files.download,
+                    iconUrl: data.files.icon,
+                    readmeUrl: data.files.readme,
+                    licenseUrl: data.files.license,
+                    version: latestCompatibleVersion
+                }));
+                searchResult.add(id);
                 ///
                 // console.log('ext name: ' + data.name + '; publisher: ' + data.namespace + '; downloadUrl: ' + data.files.download);
             }
@@ -170,13 +172,13 @@ export class VSXExtensionsModel {
         }, token);
     }
 
-    protected async findLatestCompatibleVersion(id: string): Promise<string> {
+    protected async findLatestCompatibleVersion(id: string): Promise<string | undefined> {
         // query allVersions from api (ignoring the latest)
         // check the engine tag of each version
         // if the latest compatible does not have "versionAlias": [ "latest" ], update download link
 
         const extension = await this.api.getExtension(id);
-        let latestCompatibleVersion = '';
+        let latestCompatibleVersion: string | undefined;
 
         for (const version in extension.allVersions) {
             if (version === 'latest') {
@@ -192,11 +194,9 @@ export class VSXExtensionsModel {
 
             // TODO: update to using 'semver'
             if (engines && versionAlias && this.isEngineValid(engines[0]) && versionAlias[0] === 'latest') {
-                latestCompatibleVersion = 'latest';
-                break;
+                return latestCompatibleVersion = 'latest';
             } else if (engines && this.isEngineValid(engines[0])) {
-                latestCompatibleVersion = version;
-                break;
+                return latestCompatibleVersion = version;
             }
         }
 
@@ -204,15 +204,18 @@ export class VSXExtensionsModel {
         return latestCompatibleVersion;
     }
 
+    // TODO: add documentation
     protected isEngineValid(engine: string): boolean {
-        const currentVersion = this.getCurrentVersion();
+        const currentEngine = this.getCurrentVersion();
         const parsedEngine = engine.split('@')[1];
-        return semver.lte(parsedEngine, currentVersion);
+        return semver.satisfies(currentEngine, parsedEngine);
     }
 
+    // TODO: add documentation
     protected getCurrentVersion(): string {
         return VSCODE_DEFAULT_API_VERSION;
     }
+
     protected async updateInstalled(): Promise<void> {
         return this.doChange(async () => {
             const plugins = this.pluginSupport.plugins;
