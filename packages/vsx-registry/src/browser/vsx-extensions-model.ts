@@ -21,12 +21,15 @@ import * as sanitize from 'sanitize-html';
 import { Emitter } from '@theia/core/lib/common/event';
 import { CancellationToken, CancellationTokenSource } from '@theia/core/lib/common/cancellation';
 import { VSXRegistryAPI, VSXResponseError } from '../common/vsx-registry-api';
-import { VSXSearchParam } from '../common/vsx-registry-types';
+import { VSXSearchParam, VSXExtensionRaw } from '../common/vsx-registry-types';
+import { VSXEnvironment } from '../common/vsx-environment';
 import { HostedPluginSupport } from '@theia/plugin-ext/lib/hosted/browser/hosted-plugin';
 import { VSXExtension, VSXExtensionFactory } from './vsx-extension';
 import { ProgressService } from '@theia/core/lib/common/progress-service';
 import { VSXExtensionsSearchModel } from './vsx-extensions-search-model';
 import { Deferred } from '@theia/core/lib/common/promise-util';
+import { VSCODE_DEFAULT_API_VERSION } from '@theia/plugin-ext-vscode/lib/common/plugin-vscode-environment';
+import * as semver from 'semver';
 
 @injectable()
 export class VSXExtensionsModel {
@@ -48,6 +51,9 @@ export class VSXExtensionsModel {
 
     @inject(VSXExtensionsSearchModel)
     readonly search: VSXExtensionsSearchModel;
+
+    @inject(VSXEnvironment)
+    protected readonly environment: VSXEnvironment;
 
     protected readonly initialized = new Deferred<void>();
 
@@ -139,17 +145,74 @@ export class VSXExtensionsModel {
             const searchResult = new Set<string>();
             for (const data of result.extensions) {
                 const id = data.namespace.toLowerCase() + '.' + data.name.toLowerCase();
+
+                const latestCompatibleVersionData = await this.getLatestCompatibleVersionData(id);
+                if (!latestCompatibleVersionData) {
+                    continue;
+                }
+
+                Object.assign(data.files, latestCompatibleVersionData);
+
                 this.setExtension(id).update(Object.assign(data, {
                     publisher: data.namespace,
                     downloadUrl: data.files.download,
                     iconUrl: data.files.icon,
                     readmeUrl: data.files.readme,
                     licenseUrl: data.files.license,
+                    version: latestCompatibleVersionData.version
                 }));
                 searchResult.add(id);
             }
             this._searchResult = searchResult;
         }, token);
+    }
+
+    /**
+     * Get the latest compatible extension version.
+     * - an extension satisfies compatibility if its `engines.vscode` version is supported.
+     * - if no `engines.vscode` is found, the latest extension version is returned.
+     * @param id the extension id.
+     *
+     * @returns the data for the latest compatible extension version if available, else `undefined`.
+     */
+    protected async getLatestCompatibleVersionData(id: string): Promise<Partial<VSXExtensionRaw> | undefined> {
+
+        const extension = await this.api.getExtension(id);
+
+        for (const aVersion in extension.allVersions) {
+
+            if (aVersion === 'latest') {
+                continue;
+            }
+
+            const apiUri = await this.environment.getRegistryApiUri();
+            const { engines, files, version }: VSXExtensionRaw = await this.api.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${aVersion}`);
+
+            if (engines && engines.length && this.isEngineValid(engines[0])) {
+                return { ...files, version };
+            } else if (!engines || !engines.length) {
+                return { ...extension.files, version: extension.version };
+            }
+        }
+        return;
+    }
+
+    /**
+     * Determine if the engine is valid.
+     * @param engine the engine.
+     *
+     * @returns `true` if the engine satisfies the API version.
+     */
+    protected isEngineValid(engine: string): boolean {
+        const parsedEngine = engine.split('@')[1];
+        return engine === '*' || semver.satisfies(this.getCurrentAPIVersion(), parsedEngine);
+    }
+
+    /**
+     * Get the currently supported VS Code API version.
+     */
+    protected getCurrentAPIVersion(): string {
+        return VSCODE_DEFAULT_API_VERSION;
     }
 
     protected async updateInstalled(): Promise<void> {
@@ -216,6 +279,12 @@ export class VSXExtensionsModel {
             if (data.error) {
                 return this.onDidFailRefresh(id, data.error);
             }
+
+            const latestCompatibleVersionData = await this.getLatestCompatibleVersionData(id);
+            if (latestCompatibleVersionData) {
+                Object.assign(data.files, latestCompatibleVersionData);
+            }
+
             const extension = this.setExtension(id);
             extension.update(Object.assign(data, {
                 publisher: data.namespace,
@@ -223,6 +292,7 @@ export class VSXExtensionsModel {
                 iconUrl: data.files.icon,
                 readmeUrl: data.files.readme,
                 licenseUrl: data.files.license,
+                version: latestCompatibleVersionData ? latestCompatibleVersionData.version : data.version
             }));
             return extension;
         } catch (e) {
