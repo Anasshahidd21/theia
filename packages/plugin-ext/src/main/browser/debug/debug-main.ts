@@ -50,6 +50,7 @@ import { PluginDebugAdapterContributionRegistrator, PluginDebugService } from '.
 import { FileSystem } from '@theia/filesystem/lib/common';
 import { HostedPluginSupport } from '../../../hosted/browser/hosted-plugin';
 import { DebugFunctionBreakpoint } from '@theia/debug/lib/browser/model/debug-function-breakpoint';
+import { EditorModelService } from '../text-editor-model-service';
 
 export class DebugMainImpl implements DebugMain, Disposable {
     private readonly debugExt: DebugExt;
@@ -57,6 +58,7 @@ export class DebugMainImpl implements DebugMain, Disposable {
     private readonly sessionManager: DebugSessionManager;
     private readonly labelProvider: LabelProvider;
     private readonly editorManager: EditorManager;
+    private readonly editorModelService: EditorModelService;
     private readonly breakpointsManager: BreakpointManager;
     private readonly debugConsoleSession: DebugConsoleSession;
     private readonly configurationManager: DebugConfigurationManager;
@@ -248,6 +250,7 @@ export class DebugMainImpl implements DebugMain, Disposable {
     async $startDebugging(folder: WorkspaceFolder | undefined, nameOrConfiguration: string | DebugConfiguration): Promise<boolean> {
         let configuration: DebugConfiguration | undefined;
 
+        this.editorModelService.saveAll(true);
         if (typeof nameOrConfiguration === 'string') {
             for (const options of this.configurationManager.all) {
                 if (options.configuration.name === nameOrConfiguration) {
