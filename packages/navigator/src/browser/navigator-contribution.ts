@@ -28,7 +28,8 @@ import {
     PreferenceService,
     SelectableTreeNode,
     SHELL_TABBAR_CONTEXT_MENU,
-    Widget
+    Widget,
+    Title
 } from '@theia/core/lib/browser';
 import { FileDownloadCommands } from '@theia/filesystem/lib/browser/download/file-download-command-contribution';
 import {
@@ -61,13 +62,8 @@ import {
 import { FileSystemCommands } from '@theia/filesystem/lib/browser/filesystem-frontend-contribution';
 import { NavigatorDiff, NavigatorDiffCommands } from './navigator-diff';
 import { UriSelection } from '@theia/core/lib/common/selection';
-<<<<<<< HEAD
 import { DirNode } from '@theia/filesystem/lib/browser';
 import { FileNavigatorModel } from './navigator-model';
-=======
-import { PreferenceService } from '@theia/core/lib/browser';
-import { ContextMenuService } from '@theia/core/lib/browser/context-menu-service';
->>>>>>> Core: Do no expand the widgets on the side-bars for the context menu
 
 export namespace FileNavigatorCommands {
     export const REVEAL_IN_NAVIGATOR: Command = {
@@ -167,13 +163,8 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
     @inject(PreferenceService)
     protected readonly preferenceService: PreferenceService;
 
-<<<<<<< HEAD
     @inject(WorkspaceCommandContribution)
     protected readonly workspaceCommandContribution: WorkspaceCommandContribution;
-=======
-    @inject(ContextMenuService)
-    protected readonly contextMenuService: ContextMenuService;
->>>>>>> Core: Do no expand the widgets on the side-bars for the context menu
 
     constructor(
         @inject(FileNavigatorPreferences) protected readonly fileNavigatorPreferences: FileNavigatorPreferences,
@@ -521,9 +512,9 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
      */
     private getTargetedWidget(event?: Event): Widget | undefined {
         let title: Title<Widget> | undefined;
-        if (event && event.target) {
-            const tab = this.contextMenuService.findTabBar(event);
-            title = this.contextMenuService.findTitle(tab, event);
+        if (event) {
+            const tab = this.shell.findTabBar(event);
+            title = this.shell.findTitle(tab, event);
         }
         const widget = title && title.owner;
         return widget;
