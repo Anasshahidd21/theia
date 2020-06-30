@@ -3,6 +3,14 @@
 ## v1.4.0
 
 - [core] fixed handling of environment variables on Windows [#7973](https://github.com/eclipse-theia/theia/pull/7973)
+- [core] added functionality for handling context menu for `tab-bars` without changing focus.[#6965](https://github.com/eclipse-theia/theia/pull/6965).
+
+Breaking Changes:
+
+- [core] Context-menu for `tab-bars` requires an `Event` to be passed onto it to perform actions without changing focus.[#6965](https://github.com/eclipse-theia/theia/pull/6965).
+  - This change prevents the context menu to trigger an activation for the tab.
+  - While registering a command, `Event` should be passed down, if not passed, then it will break some context menu commands such as `Close Other Tabs`.
+- [core] Moved `findTitle()` and `findTabBar()` from `common-frontend-contribution.ts` to `application-shell.ts`. [#6965](https://github.com/eclipse-theia/theia/pull/6965).
 
 ## v1.3.0
 

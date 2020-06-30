@@ -811,13 +811,13 @@ export class ApplicationShell extends Widget {
         return result;
     }
 
-    findTitle(tabBar: TabBar<Widget> | undefined, event?: Event): Title<Widget> | undefined {
-        if (event && Array.isArray(event) && event[0].target) {
-            let tabNode: HTMLElement | null = event[0].target as HTMLElement;
+    findTitle(tabBar: TabBar<Widget>, event?: Event): Title<Widget> | undefined {
+        if (event && event.target) {
+            let tabNode: HTMLElement | null = event.target as HTMLElement;
             while (tabNode && !tabNode.classList.contains('p-TabBar-tab')) {
                 tabNode = tabNode.parentElement;
             }
-            if (tabBar && tabNode && tabNode.title) {
+            if (tabNode && tabNode.title) {
                 let title = tabBar.titles.find(t => t.caption === tabNode!.title);
                 if (title) {
                     return title;
@@ -832,8 +832,8 @@ export class ApplicationShell extends Widget {
     }
 
     findTabBar(event?: Event): TabBar<Widget> | undefined {
-        if (event && Array.isArray(event) && event[0].target) {
-            const tabBar = this.findWidgetForElement(event[0].target as HTMLElement);
+        if (event && event.target) {
+            const tabBar = this.findWidgetForElement(event.target as HTMLElement);
             if (tabBar instanceof TabBar) {
                 return tabBar;
             }
@@ -1761,29 +1761,10 @@ export class ApplicationShell extends Widget {
         return area === 'main' || area === 'bottom';
     }
 
-    /**
-     * Maximizes the target widget in the target area/location. Otherwise, throw a warning.
-     * - If `options` is provided, determine the area/location of the passed widget, else use the `currentWidget`.
-     * @param options: optional `targetTabBar` to be used when searching.
-     */
-    toggleMaximized(options?: { targetTabBar: TabBar<Widget> }): void {
-        let area: String | undefined;
-        if (options) {
-            const { targetTabBar } = options;
-            if (targetTabBar instanceof Widget && this.currentWidget) {
-                area = this.getAreaFor(targetTabBar ? targetTabBar : this.currentWidget);
-            }
-        }
-        if (!area && this.currentWidget) {
-            area = this.getAreaFor(this.currentWidget);
-        }
-
-        if (area === 'bottom') {
-            this.bottomPanel.toggleMaximized();
-        } else if (area === 'main') {
-            this.mainPanel.toggleMaximized();
-        } else {
-            console.warn('Could not find area for widget');
+    toggleMaximized(): void {
+        const area = this.currentWidget && this.getAreaPanelFor(this.currentWidget);
+        if (area instanceof TheiaDockPanel && (area === this.mainPanel || area === this.bottomPanel)) {
+            area.toggleMaximized();
         }
     }
 

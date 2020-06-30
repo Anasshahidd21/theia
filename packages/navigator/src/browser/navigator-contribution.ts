@@ -244,8 +244,7 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
         registry.registerCommand(FileNavigatorCommands.REVEAL_IN_NAVIGATOR, {
             execute: (event?: Event) => {
                 const widget = this.getTargetedWidget(event);
-                this.selectWidgetFileNode(widget || this.shell.currentWidget);
-                this.openView({ activate: true });
+                this.openView({ activate: true }).then(() => this.selectWidgetFileNode(widget || this.shell.currentWidget));
             },
             isEnabled: (event?: Event) => {
                 const widget = this.getTargetedWidget(event);
@@ -514,7 +513,7 @@ export class FileNavigatorContribution extends AbstractViewContribution<FileNavi
         let title: Title<Widget> | undefined;
         if (event) {
             const tab = this.shell.findTabBar(event);
-            title = this.shell.findTitle(tab, event);
+            title = tab && this.shell.findTitle(tab, event);
         }
         const widget = title && title.owner;
         return widget;
