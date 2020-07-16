@@ -6,7 +6,8 @@
     "@theia/core": "^1.3.0",
     "@theia/filesystem": "^1.3.0",
     "@theia/navigator": "^1.3.0",
-    "@theia/workspace": "^1.3.0"
+    "@theia/workspace": "^1.3.0",
+    "sort-paths": "^1.1.1"
   },
   "publishConfig": {
     "access": "public"

@@ -21,6 +21,7 @@ import { Marker } from '../common/marker';
 import { UriSelection } from '@theia/core/lib/common/selection';
 import URI from '@theia/core/lib/common/uri';
 import { ProblemSelection } from './problem/problem-selection';
+const sortPaths = require('sort-paths');
 
 export const MarkerOptions = Symbol('MarkerOptions');
 export interface MarkerOptions {
@@ -52,6 +53,7 @@ export abstract class MarkerTree<T extends object> extends TreeImpl {
         const id = uri.toString();
         const existing = this.getNode(id);
         const markers = this.markerManager.findMarkers({ uri });
+        console.dir(this.getAllMarkerFileNodes());
         if (markers.length <= 0) {
             if (MarkerInfoNode.is(existing)) {
                 CompositeTreeNode.removeChild(existing.parent, existing);
@@ -94,6 +96,30 @@ export abstract class MarkerTree<T extends object> extends TreeImpl {
             selected: false,
             numberOfMarkers: 0
         };
+    }
+
+    protected getAllMarkerFileNodes(): MarkerInfoNode[] {
+        const nodes: MarkerInfoNode[] = [];
+        for (const id of this.markerManager.getUris()) {
+            const node = this.createMarkerInfo(id, new URI(id));
+            nodes.push(node);
+        }
+        const sortedNodes: MarkerInfoNode[] = this.sortNodes(nodes);
+        return sortedNodes;
+    }
+
+    protected sortNodes(nodes: MarkerInfoNode[]): MarkerInfoNode[] {
+        const id = nodes.map(node => node.id);
+        const sortedPath: string[] = sortPaths(id) as Array<string>;
+        nodes.sort((a, b) => {
+            if (sortedPath.indexOf(a.id) > sortedPath.indexOf(b.id)) {
+                return 1;
+            } else if (sortedPath.indexOf(a.id) < sortedPath.indexOf(b.id)) {
+                return -1;
+            }
+            return 0;
+        });
+        return nodes;
     }
 
     protected getMarkerNodes(parent: MarkerInfoNode, markers: Marker<T>[]): MarkerNode[] {
