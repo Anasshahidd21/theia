@@ -19,10 +19,11 @@ import { ProblemManager } from './problem-manager';
 import { MarkerNode, MarkerTree, MarkerOptions, MarkerInfoNode } from '../marker-tree';
 import { MarkerTreeModel } from '../marker-tree-model';
 import { injectable, inject } from 'inversify';
-import { OpenerOptions, TreeNode } from '@theia/core/lib/browser';
+import { OpenerOptions, TreeNode, CompositeTreeNode } from '@theia/core/lib/browser';
 import { Marker } from '../../common/marker';
 import { Diagnostic } from 'vscode-languageserver-types';
 import { ProblemUtils } from './problem-utils';
+const sortPaths = require('sort-paths');
 
 @injectable()
 export class ProblemTree extends MarkerTree<Diagnostic> {
@@ -72,6 +73,19 @@ export class ProblemTree extends MarkerTree<Diagnostic> {
 
 @injectable()
 export class ProblemTreeModel extends MarkerTreeModel {
+
+    sortChildNodes(): TreeNode[] {
+        const children = (this.root as CompositeTreeNode).children;
+        const sortedPath: string[] = sortPaths(children.map(child => child.id), '/') as Array<string>;
+        return [...children].sort((a, b) => {
+            if (sortedPath.indexOf(a.id) > sortedPath.indexOf(b.id)) {
+                return 1;
+            } else if (sortedPath.indexOf(a.id) < sortedPath.indexOf(b.id)) {
+                return -1;
+            }
+            return 0;
+        });
+    }
 
     @inject(ProblemManager) protected readonly problemManager: ProblemManager;
 
