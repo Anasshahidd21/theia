@@ -155,6 +155,10 @@ export class PluginViewRegistry implements FrontendApplicationContribution {
             }
             return;
         }
+        // does not update the view visibility if the view is hidden explicitly.
+        if (widget.isHidden) {
+            return;
+        }
         const viewInfo = this.views.get(viewId);
         if (!viewInfo) {
             return;
