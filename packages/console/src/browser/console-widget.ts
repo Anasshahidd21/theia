@@ -26,6 +26,7 @@ import { ProtocolToMonacoConverter, MonacoToProtocolConverter } from 'monaco-lan
 import { ConsoleHistory } from './console-history';
 import { ConsoleContentWidget } from './console-content-widget';
 import { ConsoleSession } from './console-session';
+import { Emitter } from '@theia/core/lib/common/event';
 
 export const ConsoleOptions = Symbol('ConsoleWidgetOptions');
 export interface ConsoleOptions {
@@ -79,6 +80,9 @@ export class ConsoleWidget extends BaseWidget implements StatefulWidget {
 
     protected _input: MonacoEditor;
 
+    protected readonly onRestore = new Emitter<void>();
+    readonly onRestoreChange = this.onRestore.event;
+
     constructor() {
         super();
         this.node.classList.add(ConsoleWidget.styles.node);
@@ -105,8 +109,9 @@ export class ConsoleWidget extends BaseWidget implements StatefulWidget {
         const inputWidget = new Widget();
         inputWidget.node.classList.add(ConsoleWidget.styles.input);
         layout.addWidget(inputWidget);
-
+        this.onRestoreChange(async () => this._input = await this.createInput(inputWidget.node));
         const input = this._input = await this.createInput(inputWidget.node);
+
         this.toDispose.push(input);
         this.toDispose.push(input.getControl().onDidLayoutChange(() => this.resizeContent()));
 
@@ -248,6 +253,7 @@ export class ConsoleWidget extends BaseWidget implements StatefulWidget {
     }
 
     restoreState(oldState: object): void {
+        this.onRestore.fire();
         if ('history' in oldState) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             this.history.restore((<any>oldState)['history']);
