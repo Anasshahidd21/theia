@@ -30,6 +30,11 @@ export const searchInWorkspacePreferencesSchema: PreferenceSchema = {
             default: 'auto',
             type: 'string',
             enum: ['auto', 'alwaysCollapse', 'alwaysExpand'],
+        },
+        'search.excludeFiles': {
+            description: 'Configure glob patterns for excluding files and folders in searches.',
+            default: { '**/node_modules': true, '**/bower_components': true, '**/*.code-search': true },
+            type: 'object'
         }
     }
 };
