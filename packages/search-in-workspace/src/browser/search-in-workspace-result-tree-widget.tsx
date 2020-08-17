@@ -42,6 +42,7 @@ import * as React from 'react';
 import { SearchInWorkspacePreferences } from './search-in-workspace-preferences';
 import { ProgressService } from '@theia/core';
 import { ColorRegistry } from '@theia/core/lib/browser/color-registry';
+import * as minimatch from 'minimatch';
 
 const ROOT_ID = 'ResultTree';
 
@@ -227,6 +228,13 @@ export class SearchInWorkspaceResultTreeWidget extends TreeWidget {
             onResult: (aSearchId: number, result: SearchInWorkspaceResult) => {
                 if (token.isCancellationRequested || aSearchId !== searchId) {
                     return;
+                }
+                const excludeGlob = this.searchInWorkspacePreferences['search.excludeFiles'];
+                const globPatterns = Object.keys(excludeGlob);
+                for (const pattern of globPatterns) {
+                    if (minimatch(result.fileUri, pattern)) {
+                        return;
+                    }
                 }
                 const { path } = this.filenameAndPath(result.root, result.fileUri);
                 const tree = this.resultTree;

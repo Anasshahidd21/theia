@@ -33,7 +33,7 @@ export const searchInWorkspacePreferencesSchema: PreferenceSchema = {
         },
         'search.excludeFiles': {
             description: 'Configure glob patterns for excluding files and folders in searches.',
-            default: { '**/node_modules': true, '**/bower_components': true, '**/*.code-search': true },
+            default: { '/.git/**': true, '**/.svn': true, '**/.hg': true, '**/CVS': true, '**/.DS_Store': true },
             type: 'object'
         }
     }
