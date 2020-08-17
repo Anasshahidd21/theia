@@ -42,6 +42,7 @@ export const searchInWorkspacePreferencesSchema: PreferenceSchema = {
 export class SearchInWorkspaceConfiguration {
     'search.lineNumbers': boolean;
     'search.collapseResults': string;
+    'search.excludeFiles': object;
 }
 
 export const SearchInWorkspacePreferences = Symbol('SearchInWorkspacePreferences');
