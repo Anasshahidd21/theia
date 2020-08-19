@@ -17,7 +17,7 @@
 import { Widget, Message, BaseWidget, Key, StatefulWidget, MessageLoop } from '@theia/core/lib/browser';
 import { inject, injectable, postConstruct } from 'inversify';
 import { SearchInWorkspaceResultTreeWidget } from './search-in-workspace-result-tree-widget';
-import { SearchInWorkspaceOptions } from '../common/search-in-workspace-interface';
+import { SearchInWorkspaceOptions, getExcludedGlobs } from '../common/search-in-workspace-interface';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Event, Emitter, Disposable } from '@theia/core/lib/common';
@@ -25,6 +25,8 @@ import { WorkspaceService } from '@theia/workspace/lib/browser';
 import { SearchInWorkspaceContextKeyService } from './search-in-workspace-context-key-service';
 import { CancellationTokenSource } from '@theia/core';
 import { ProgressBarFactory } from '@theia/core/lib/browser/progress-bar-factory';
+import { FileSystemPreferences } from '@theia/filesystem/lib/browser/filesystem-preferences';
+import { SearchInWorkspacePreferences } from './search-in-workspace-preferences';
 
 export interface SearchFieldState {
     className: string;
@@ -85,6 +87,12 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
 
     @inject(ProgressBarFactory)
     protected readonly progressBarFactory: ProgressBarFactory;
+
+    @inject(FileSystemPreferences)
+    protected readonly filesPreferences: FileSystemPreferences;
+
+    @inject(SearchInWorkspacePreferences)
+    protected readonly searchInWorkspacePreferences: SearchInWorkspacePreferences;
 
     @postConstruct()
     protected init(): void {
@@ -368,9 +376,18 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
                 return;
             } else {
                 this.searchTerm = searchValue;
-                this.resultTreeWidget.search(this.searchTerm, (this.searchInWorkspaceOptions || {}));
+                const options: SearchInWorkspaceOptions = {
+                    ...this.searchInWorkspaceOptions,
+                    excludedGlobs: this.getExcludedGlobs()
+                };
+                this.resultTreeWidget.search(this.searchTerm, (options || {}));
             }
         }
+    }
+
+    protected getExcludedGlobs(): string[] {
+        const excludedGlobsValue = { ...this.filesPreferences['files.exclude'], ...this.searchInWorkspacePreferences['search.excludeFiles'] };
+        return getExcludedGlobs(excludedGlobsValue);
     }
 
     protected renderSearchField(): React.ReactNode {

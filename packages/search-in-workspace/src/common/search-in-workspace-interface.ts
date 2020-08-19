@@ -53,6 +53,10 @@ export interface SearchInWorkspaceOptions {
      * Glob pattern for matching files and directories to exclude the search.
      */
     exclude?: string[];
+    /**
+     * Glob pattern to match file and directories based on the preferences 'files.exclude' and 'search.excludeFiles'.
+     */
+    excludedGlobs?: string[]
 }
 
 export interface SearchInWorkspaceResult {
@@ -142,4 +146,8 @@ export interface SearchInWorkspaceServer extends JsonRpcServer<SearchInWorkspace
     cancel(searchId: number): Promise<void>;
 
     dispose(): void;
+}
+
+export function getExcludedGlobs(globs: { [x: string]: boolean }): string[] {
+    return Object.keys(globs).filter(key => !!globs[key]);
 }

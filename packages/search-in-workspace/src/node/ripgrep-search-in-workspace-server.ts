@@ -99,6 +99,11 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
         if (options && options.includeIgnored) {
             args.push('--no-ignore');
         }
+        if (options && options.excludedGlobs && !options.includeIgnored) {
+            for (const glob of options.excludedGlobs) {
+                args.push('--glob=!**/' + glob);
+            }
+        }
         if (options && options.maxFileSize) {
             args.push('--max-filesize=' + options.maxFileSize.trim());
         } else {
