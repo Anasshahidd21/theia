@@ -134,7 +134,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
             useRegExp: false,
             includeIgnored: false,
             include: [],
-            exclude: [],
+            exclude: this.getExcludedGlobs(),
             maxResults: 2000
         };
         this.toDispose.push(this.resultTreeWidget.onChange(r => {
@@ -237,7 +237,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
         this.searchTerm = '';
         this.replaceTerm = '';
         this.searchInWorkspaceOptions.include = [];
-        this.searchInWorkspaceOptions.exclude = [];
+        this.searchInWorkspaceOptions.exclude = this.getExcludedGlobs();
         this.includeIgnoredState.enabled = false;
         this.matchCaseState.enabled = false;
         this.wholeWordState.enabled = false;
@@ -250,7 +250,7 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
             (search as HTMLInputElement).value = '';
             (replace as HTMLInputElement).value = '';
             (include as HTMLInputElement).value = '';
-            (exclude as HTMLInputElement).value = '';
+            (exclude as HTMLInputElement).value = this.getExcludedGlobs().join();
         }
         this.resultTreeWidget.search(this.searchTerm, this.searchInWorkspaceOptions);
         this.update();
@@ -376,11 +376,11 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
                 return;
             } else {
                 this.searchTerm = searchValue;
-                const options: SearchInWorkspaceOptions = {
-                    ...this.searchInWorkspaceOptions,
-                    excludedGlobs: this.getExcludedGlobs()
-                };
-                this.resultTreeWidget.search(this.searchTerm, (options || {}));
+                // const options: SearchInWorkspaceOptions = {
+                //     ...this.searchInWorkspaceOptions,
+                //     excludedGlobs: this.getExcludedGlobs()
+                // };
+                this.resultTreeWidget.search(this.searchTerm, (this.searchInWorkspaceOptions || {}));
             }
         }
     }
@@ -537,6 +537,8 @@ export class SearchInWorkspaceWidget extends BaseWidget implements StatefulWidge
                     if (e.target) {
                         if (Key.ENTER.keyCode === e.keyCode) {
                             this.resultTreeWidget.search(this.searchTerm, this.searchInWorkspaceOptions);
+                        } else if (kind === 'exclude') {
+                            this.searchInWorkspaceOptions[kind] = this.getExcludedGlobs().concat(this.splitOnComma((e.target as HTMLInputElement).value));
                         } else {
                             this.searchInWorkspaceOptions[kind] = this.splitOnComma((e.target as HTMLInputElement).value);
                         }
